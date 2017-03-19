@@ -5,10 +5,15 @@ import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.awt.GLCanvas;
 import com.jogamp.opengl.glu.GLU;
-import com.jogamp.opengl.util.FPSAnimator;
+import com.jogamp.opengl.util.texture.Texture;
+import com.jogamp.opengl.util.texture.TextureIO;
+
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 
 import static com.jogamp.opengl.GL.*;
-import static com.jogamp.opengl.GL2ES1.GL_PERSPECTIVE_CORRECTION_HINT;
 import static com.jogamp.opengl.fixedfunc.GLLightingFunc.GL_SMOOTH;
 import static com.jogamp.opengl.fixedfunc.GLMatrixFunc.GL_MODELVIEW;
 import static com.jogamp.opengl.fixedfunc.GLMatrixFunc.GL_PROJECTION;
@@ -18,13 +23,14 @@ import static com.jogamp.opengl.fixedfunc.GLMatrixFunc.GL_PROJECTION;
  */
 @SuppressWarnings("serial")
 public class TestZone extends GLCanvas implements GLEventListener {
-	private static final String TITLE = "TestZone ^-^";
-	public static final int SCREEN_WIDTH = 100;
-	public static final int SCREEN_HEIGHT = 100;
-	GLCanvas canvas = new GLCanvas();
-	FPSAnimator animator = new FPSAnimator(canvas,60);
 	private GLU glu;
-
+	private float x = 0;
+	private float y = 0;
+	private int texture;
+	float aa = 0.01f;
+	private int textureHeight = 0;
+	private int textureWidth = 0;
+	private String filename = "C:\\Users\\bodyi\\Desktop\\a.png";
 
 	public TestZone() {
 		this.addGLEventListener(this);
@@ -32,16 +38,32 @@ public class TestZone extends GLCanvas implements GLEventListener {
 
 	@Override
 	public void init(GLAutoDrawable drawable) {
-		GL2 gl = drawable.getGL().getGL2();      // get the OpenGL graphics context
-		glu = new GLU();                         // get GL Utilities
-		gl.glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // set background (clear) color
-		gl.glClearDepth(1.0f);      // set clear depth value to farthest
-		gl.glEnable(GL_DEPTH_TEST); // enables depth testing
-		gl.glDepthFunc(GL_LEQUAL);  // the type of depth test to do
-		gl.glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST); // best perspective correction
-		gl.glShadeModel(GL_SMOOTH); // blends colors nicely, and smoothes out lighting
+		GL2 gl = drawable.getGL().getGL2();
+		glu = new GLU();
+		gl.glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+		gl.glClearDepth(1.0f);
+		// set clear depth value to farthest
+		//gl.glEnable(GL_DEPTH_TEST); // enables depth testing
+		//gl.glDepthFunc(GL_LEQUAL);  // the type of depth test to do
+		//gl.glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST); // best perspective correction
+		gl.glShadeModel(GL_SMOOTH);
 
-		// ----- Your OpenGL initialization code here -----
+		gl.glEnable(GL2.GL_TEXTURE_2D);
+		try{
+
+			File im = new File(filename);
+			Texture t = TextureIO.newTexture(im, true);
+			texture= t.getTextureObject(gl);
+
+		}catch(IOException e){
+			e.printStackTrace();
+		}
+
+		try {
+			updateTextureDimentions();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 	@Override
@@ -49,42 +71,51 @@ public class TestZone extends GLCanvas implements GLEventListener {
 
 	}
 
-
 	@Override
 	public void reshape(GLAutoDrawable drawable, int x, int y, int width, int height) {
-		GL2 gl = drawable.getGL().getGL2();  // get the OpenGL 2 graphics context
-
-		if (height == 0) height = 1;   // prevent divide by zero
+		GL2 gl = drawable.getGL().getGL2();
+		if (height == 0) height = 1;
 		float aspect = (float)width / height;
-
-		// Set the view port (display area) to cover the entire window
 		gl.glViewport(0, 0, width, height);
+		gl.glMatrixMode(GL_PROJECTION);
+		gl.glLoadIdentity();
 
-		// Setup perspective projection, with aspect ratio matches viewport
-		gl.glMatrixMode(GL_PROJECTION);  // choose projection matrix
-		gl.glLoadIdentity();             // reset projection matrix
-		glu.gluPerspective(45.0, aspect, 0.1, 100.0); // fovy, aspect, zNear, zFar
+		glu.gluPerspective(45.0, aspect, 0.1, 100.0);
 
-		// Enable the model-view transform
 		gl.glMatrixMode(GL_MODELVIEW);
-		gl.glLoadIdentity(); // reset
+		gl.glLoadIdentity();
 	}
 
 	@Override
 	public void display(GLAutoDrawable drawable) {
-		GL2 gl = drawable.getGL().getGL2();  // get the OpenGL 2 graphics context
-		gl.glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // clear color and depth buffers
-		gl.glLoadIdentity();  // reset the model-view matrix
+		GL2 gl = drawable.getGL().getGL2();
+		gl.glClearColor(0f, 0f, 0f, 0f);
+		gl.glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		gl.glLoadIdentity();
 
-		// ----- Your OpenGL rendering code here (Render a white triangle for testing) -----
-		gl.glTranslatef(0.0f, 0.0f, -6.0f); // translate into the screen
-		gl.glBegin(GL_TRIANGLES); // draw using triangles
-		gl.glVertex3f(0.0f, 1.0f, 0.0f);
-		gl.glVertex3f(-1.0f, -1.0f, 0.0f);
-		gl.glVertex3f(1.0f, -1.0f, 0.0f);
+		gl.glTranslatef(-0.5f, -0.5f, -1.0f);
+		System.out.println(aa);
+		gl.glBindTexture(GL2.GL_TEXTURE_2D, texture);
+		gl.glBegin(GL2.GL_QUADS);
+		gl.glTexCoord2f(0, 0);
+		gl.glVertex2f(x , y );
+		gl.glTexCoord2f(1, 0);
+		gl.glVertex2f(x + 1 , y );
+		gl.glTexCoord2f(1, 1);
+		gl.glVertex2f(x + 1 , y + 1 );
+		gl.glTexCoord2f(0, 1);
+		gl.glVertex2f(x , y + 1 );
 		gl.glEnd();
+		gl.glFlush();
+
 	}
 
+	private void updateTextureDimentions() throws IOException
+	{
+		BufferedImage bimg = ImageIO.read(new File(filename));
+		textureWidth = bimg.getWidth();
+		textureHeight = bimg.getHeight();
+	}
 
 }
 
